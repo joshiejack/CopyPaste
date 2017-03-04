@@ -1,0 +1,16 @@
+[
+{
+  "modid": "copypaste",
+  "name": "Copy Paste",
+  "description": "Copies contents from config/copy to new or existing worlds.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["joshiejack"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
