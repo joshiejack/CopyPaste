@@ -29,7 +29,7 @@ import static joshie.copy.CopyPaste.VERSION;
 @Config(modid = MODID)
 public class CopyPaste {
     static final String MODID = "copypaste";
-    static final String VERSION = "1.0";
+    static final String VERSION = "1.1";
     @Config.Comment("Keep world data updated with the contents of the copy folder")
     public static boolean copyExisting = true;
     private Logger logger = LogManager.getLogger(MODID);
@@ -48,6 +48,7 @@ public class CopyPaste {
         File file = new File(directory, "copied.log");
         if (!file.exists()) {
             try {
+                logger.log(Level.INFO, "Copying files to the world...");
                 FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(root)));
                 FileUtils.copyDirectory(root, isavehandler.getWorldDirectory());
             } catch (IOException ex) {
@@ -56,6 +57,7 @@ public class CopyPaste {
             }
         } else if (copyExisting) {
             try {
+                logger.log(Level.INFO, "Validating and updating files in the world...");
                 List<String> hashes = getMD5FromFiles(getFilesInDirectory(root));
                 List<String> existing = FileUtils.readLines(file);
                 boolean changed = false;
@@ -63,7 +65,7 @@ public class CopyPaste {
                 for (String hash : existing) {
                     if (!hashes.contains(hash)) changed = deleteFileWithHash(directory, hash);
                 }
-
+                
                 //Remove all the non existing empty directories
                 if (changed) {
                     FileUtils.listFilesAndDirs(directory, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE)
@@ -83,11 +85,15 @@ public class CopyPaste {
         }
     }
 
-    private List<String> getMD5FromFiles(Collection<File> files) throws IOException {
+    private List<String> getMD5FromFiles(Collection<File> files) {
         List<String> hashes = new ArrayList<>();
-        for (File file : files) {
-            if (file.isFile()) hashes.add(DigestUtils.md5Hex(new FileInputStream(file)));
-        }
+        files.stream().filter(File::isFile).forEach(file -> {
+            try (FileInputStream fis = new FileInputStream(file)) {
+                hashes.add(DigestUtils.md5Hex(fis));
+            } catch (IOException ex) {
+                logger.log(Level.ERROR, "Failed to fetch the hash for the file:" + file.toString());
+            }
+        });
 
         return hashes;
     }
@@ -107,11 +113,13 @@ public class CopyPaste {
         return false;
     }
 
-    private boolean md5Matches(String string, File file) throws IOException {
-        FileInputStream fis = new FileInputStream(file);
-        boolean ret = string.equals(DigestUtils.md5Hex(fis));
-        fis.close();
-        return ret;
+    private boolean md5Matches(String string, File file) {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            return string.equals(DigestUtils.md5Hex(fis));
+        } catch (IOException ex) {
+            logger.log(Level.ERROR, "Failed to fetch the hash for the file:" + file.toString());
+            return false;
+        }
     }
 
     private Collection<File> getFilesInDirectory(File directory) {
@@ -127,7 +135,6 @@ public class CopyPaste {
                     return true;
                 }
             } catch (IOException ex) {
-                ex.printStackTrace();
                 logger.log(Level.ERROR, "Failed to delete the file " + file.toString() + " from the world");
             }
         }
