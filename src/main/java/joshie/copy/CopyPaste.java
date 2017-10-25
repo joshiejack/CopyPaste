@@ -25,7 +25,7 @@ import static joshie.copy.CopyPaste.MODID;
 import static joshie.copy.CopyPaste.VERSION;
 
 @SuppressWarnings("ConstantConditions, WeakerAccess, unused")
-@Mod(modid = MODID, version = VERSION, acceptableRemoteVersions = "*")
+@Mod(modid = MODID, version = VERSION, acceptableRemoteVersions = "*", acceptedMinecraftVersions = "*")
 @Config(modid = MODID)
 public class CopyPaste {
     static final String MODID = "copypaste";
