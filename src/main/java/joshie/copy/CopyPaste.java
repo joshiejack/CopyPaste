@@ -2,11 +2,13 @@ package joshie.copy;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.storage.ISaveHandler;
-import net.minecraftforge.common.config.Config;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.Mod.EventHandler;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.server.FMLServerAboutToStartEvent;
+import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -22,42 +24,38 @@ import java.util.Collection;
 import java.util.List;
 
 import static joshie.copy.CopyPaste.MODID;
-import static joshie.copy.CopyPaste.VERSION;
 
-@SuppressWarnings("ConstantConditions, WeakerAccess, unused")
-@Mod(modid = MODID, version = VERSION, acceptableRemoteVersions = "*", acceptedMinecraftVersions = "*")
-@Config(modid = MODID)
+@SuppressWarnings("WeakerAccess, unused")
+@Mod(value = MODID)
+@Mod.EventBusSubscriber(modid = MODID)
 public class CopyPaste {
     static final String MODID = "copypaste";
-    static final String VERSION = "1.1";
-    @Config.Comment("Keep world data updated with the contents of the copy folder")
-    public static boolean copyExisting = true;
-    private Logger logger = LogManager.getLogger(MODID);
-    private File root;
+    private static final Logger LOGGER = LogManager.getLogger(MODID);
+    private static File root = new File(FMLPaths.CONFIGDIR.get().toFile(), "copy");
 
-    @EventHandler
-    public void preInit(FMLPreInitializationEvent event) {
-        root = new File(event.getModConfigurationDirectory(), "copy");
+    public CopyPaste() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.spec);
     }
 
-    @EventHandler
-    public void onServerStarting(FMLServerAboutToStartEvent event) {
+    @SubscribeEvent
+    public static void onServerStarting(FMLServerAboutToStartEvent event) {
+        System.out.println("Copy: " + root.getPath());
         MinecraftServer server = event.getServer();
-        ISaveHandler isavehandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), true);
+        ISaveHandler isavehandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), server);
         File directory = isavehandler.getWorldDirectory();
         File file = new File(directory, "copied.log");
         if (!file.exists()) {
             try {
-                logger.log(Level.INFO, "Copying files to the world...");
+                LOGGER.log(Level.INFO, "Copying files to the world...");
                 FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(root)));
                 FileUtils.copyDirectory(root, isavehandler.getWorldDirectory());
             } catch (IOException ex) {
                 ex.printStackTrace();
-                logger.log(Level.ERROR, "There was an error while trying to copy ");
+                LOGGER.log(Level.ERROR, "There was an error while trying to copy ");
             }
-        } else if (copyExisting) {
+        } else if (Config.GENERAL.copyExisting.get()) {
             try {
-                logger.log(Level.INFO, "Validating and updating files in the world...");
+                LOGGER.log(Level.INFO, "Validating and updating files in the world...");
                 List<String> hashes = getMD5FromFiles(getFilesInDirectory(root));
                 List<String> existing = FileUtils.readLines(file);
                 boolean changed = false;
@@ -65,7 +63,7 @@ public class CopyPaste {
                 for (String hash : existing) {
                     if (!hashes.contains(hash)) changed = deleteFileWithHash(directory, hash);
                 }
-                
+
                 //Remove all the non existing empty directories
                 if (changed) {
                     FileUtils.listFilesAndDirs(directory, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE)
@@ -80,25 +78,25 @@ public class CopyPaste {
                 //Update the log file
                 if (changed) FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(root)));
             } catch (IOException ex) {
-                logger.log(Level.ERROR, "Failed to update an existing world with updated files");
+                LOGGER.log(Level.ERROR, "Failed to update an existing world with updated files");
             }
         }
     }
 
-    private List<String> getMD5FromFiles(Collection<File> files) {
+    private static List<String> getMD5FromFiles(Collection<File> files) {
         List<String> hashes = new ArrayList<>();
         files.stream().filter(File::isFile).forEach(file -> {
             try (FileInputStream fis = new FileInputStream(file)) {
                 hashes.add(DigestUtils.md5Hex(fis));
             } catch (IOException ex) {
-                logger.log(Level.ERROR, "Failed to fetch the hash for the file:" + file.toString());
+                LOGGER.log(Level.ERROR, "Failed to fetch the hash for the file:" + file.toString());
             }
         });
 
         return hashes;
     }
 
-    private boolean copyFileWithHash(File worldDirectory, String string) {
+    private static boolean copyFileWithHash(File worldDirectory, String string) {
         for (File file : getFilesInDirectory(root)) {
             try {
                 if (md5Matches(string, file)) {
@@ -106,28 +104,27 @@ public class CopyPaste {
                     return true; //Copied so returning true
                 }
             } catch (IOException ex) {
-                logger.log(Level.ERROR, "Failed to copy the file " + file.toString() + " from root to the world");
+                LOGGER.log(Level.ERROR, "Failed to copy the file " + file.toString() + " from root to the world");
             }
         }
 
         return false;
     }
 
-    private boolean md5Matches(String string, File file) {
+    private static boolean md5Matches(String string, File file) {
         try (FileInputStream fis = new FileInputStream(file)) {
             return string.equals(DigestUtils.md5Hex(fis));
         } catch (IOException ex) {
-            logger.log(Level.ERROR, "Failed to fetch the hash for the file:" + file.toString());
+            LOGGER.log(Level.ERROR, "Failed to fetch the hash for the file:" + file.toString());
             return false;
         }
     }
 
-    private Collection<File> getFilesInDirectory(File directory) {
+    private static Collection<File> getFilesInDirectory(File directory) {
         return FileUtils.listFiles(directory, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    private boolean deleteFileWithHash(File directory, String string) {
+    private static boolean deleteFileWithHash(File directory, String string) {
         for (File file : getFilesInDirectory(directory)) {
             try {
                 if (file.isFile() && md5Matches(string, file)) {
@@ -135,10 +132,29 @@ public class CopyPaste {
                     return true;
                 }
             } catch (IOException ex) {
-                logger.log(Level.ERROR, "Failed to delete the file " + file.toString() + " from the world");
+                LOGGER.log(Level.ERROR, "Failed to delete the file " + file.toString() + " from the world");
+            }
+        }
+        return false;
+    }
+
+    static class Config {
+        private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+        public static final General GENERAL = new General(BUILDER);
+
+        static class General {
+            public ForgeConfigSpec.BooleanValue copyExisting;
+
+            General(ForgeConfigSpec.Builder builder) {
+                builder.push("general");
+                copyExisting = builder
+                        .comment("Keep world data updated with the contents of the copy folder")
+                        .define("copyExisting", true);
+                builder.pop();
             }
         }
 
-        return false;
+        public static final ForgeConfigSpec spec = BUILDER.build();
+
     }
 }

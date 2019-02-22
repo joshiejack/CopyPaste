@@ -1,0 +1,19 @@
+modLoader="javafml"
+loaderVersion="[25,)"
+issueTrackerURL="https://github.com/joshiejack/CopyPaste/issues"
+
+[[mods]]
+    modId="copypaste"
+    version="${file.jarVersion}"
+    displayName="Copy Paste"
+    displayURL="https://minecraft.curseforge.com/projects/copy-paste"
+    authors="joshiejack, Girafi"
+    description='''
+    Copies contents from config/copy to new or existing worlds.
+    '''
+
+[[dependencies.copypaste]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.13.0,]"
+    side="BOTH"
