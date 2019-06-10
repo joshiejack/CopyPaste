@@ -17,7 +17,7 @@ archivesBaseName = "copypaste"
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 minecraft {
-    mappings channel: 'snapshot', version: '20190215-1.13.1'
+    mappings channel: 'snapshot', version: '20190609-1.14.2'
 
     runs {
         client {

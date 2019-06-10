@@ -1,7 +1,7 @@
 package joshie.copy;
 
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.storage.ISaveHandler;
+import net.minecraft.world.storage.SaveHandler;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -41,7 +41,7 @@ public class CopyPaste {
     public static void onServerStarting(FMLServerAboutToStartEvent event) {
         System.out.println("Copy: " + root.getPath());
         MinecraftServer server = event.getServer();
-        ISaveHandler isavehandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), server);
+        SaveHandler isavehandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), server);
         File directory = isavehandler.getWorldDirectory();
         File file = new File(directory, "copied.log");
         if (!file.exists()) {
