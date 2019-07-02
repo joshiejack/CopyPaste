@@ -39,16 +39,18 @@ public class CopyPaste {
 
     @SubscribeEvent
     public static void onServerStarting(FMLServerAboutToStartEvent event) {
-        System.out.println("Copy: " + root.getPath());
+        if (!root.exists()) {
+            root.mkdir();
+        }
         MinecraftServer server = event.getServer();
-        SaveHandler isavehandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), server);
-        File directory = isavehandler.getWorldDirectory();
+        SaveHandler saveHandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), server);
+        File directory = saveHandler.getWorldDirectory();
         File file = new File(directory, "copied.log");
         if (!file.exists()) {
             try {
                 LOGGER.log(Level.INFO, "Copying files to the world...");
                 FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(root)));
-                FileUtils.copyDirectory(root, isavehandler.getWorldDirectory());
+                FileUtils.copyDirectory(root, saveHandler.getWorldDirectory());
             } catch (IOException ex) {
                 ex.printStackTrace();
                 LOGGER.log(Level.ERROR, "There was an error while trying to copy ");
