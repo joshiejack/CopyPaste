@@ -1,7 +1,6 @@
 package joshie.copy;
 
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.storage.SaveHandler;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -31,26 +30,26 @@ import static joshie.copy.CopyPaste.MODID;
 public class CopyPaste {
     static final String MODID = "copypaste";
     private static final Logger LOGGER = LogManager.getLogger(MODID);
-    private static File root = new File(FMLPaths.CONFIGDIR.get().toFile(), "copy");
+    private final static File ROOT = new File(FMLPaths.CONFIGDIR.get().toFile(), "copy");
 
     public CopyPaste() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.spec);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     @SubscribeEvent
     public static void onServerStarting(FMLServerAboutToStartEvent event) {
-        if (!root.exists()) {
-            root.mkdir();
+        if (!ROOT.exists()) {
+            ROOT.mkdir();
         }
         MinecraftServer server = event.getServer();
-        SaveHandler saveHandler = server.getActiveAnvilConverter().getSaveLoader(server.getFolderName(), server);
-        File directory = saveHandler.getWorldDirectory();
-        File file = new File(directory, "copied.log");
+
+        File worldDirectory = new File(FMLPaths.GAMEDIR.get().toFile(), "saves").toPath().resolve(server.func_240793_aU_().getWorldName()).toFile();
+        File file = new File(worldDirectory, "copied.log");
         if (!file.exists()) {
             try {
                 LOGGER.log(Level.INFO, "Copying files to the world...");
-                FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(root)));
-                FileUtils.copyDirectory(root, saveHandler.getWorldDirectory());
+                FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(ROOT)));
+                FileUtils.copyDirectory(ROOT, worldDirectory);
             } catch (IOException ex) {
                 ex.printStackTrace();
                 LOGGER.log(Level.ERROR, "There was an error while trying to copy ");
@@ -58,27 +57,27 @@ public class CopyPaste {
         } else if (Config.GENERAL.copyExisting.get()) {
             try {
                 LOGGER.log(Level.INFO, "Validating and updating files in the world...");
-                List<String> hashes = getMD5FromFiles(getFilesInDirectory(root));
+                List<String> hashes = getMD5FromFiles(getFilesInDirectory(ROOT));
                 List<String> existing = FileUtils.readLines(file);
                 boolean changed = false;
                 //Check in the existing hashes, if the file isn't supposed to existing anymore get rid of it
                 for (String hash : existing) {
-                    if (!hashes.contains(hash)) changed = deleteFileWithHash(directory, hash);
+                    if (!hashes.contains(hash)) changed = deleteFileWithHash(worldDirectory, hash);
                 }
 
                 //Remove all the non existing empty directories
                 if (changed) {
-                    FileUtils.listFilesAndDirs(directory, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE)
+                    FileUtils.listFilesAndDirs(worldDirectory, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE)
                             .stream().filter(File::isDirectory).forEach(File::delete);
                 }
 
                 //Check in the root hashes, if it doesn't exist already then copy the file
                 for (String hash : hashes) {
-                    if (!existing.contains(hash)) changed = copyFileWithHash(directory, hash);
+                    if (!existing.contains(hash)) changed = copyFileWithHash(worldDirectory, hash);
                 }
 
                 //Update the log file
-                if (changed) FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(root)));
+                if (changed) FileUtils.writeLines(file, getMD5FromFiles(getFilesInDirectory(ROOT)));
             } catch (IOException ex) {
                 LOGGER.log(Level.ERROR, "Failed to update an existing world with updated files");
             }
@@ -99,10 +98,10 @@ public class CopyPaste {
     }
 
     private static boolean copyFileWithHash(File worldDirectory, String string) {
-        for (File file : getFilesInDirectory(root)) {
+        for (File file : getFilesInDirectory(ROOT)) {
             try {
                 if (md5Matches(string, file)) {
-                    FileUtils.copyFileToDirectory(file, new File(worldDirectory, file.getParentFile().toString().replace(root.toString(), "")));
+                    FileUtils.copyFileToDirectory(file, new File(worldDirectory, file.getParentFile().toString().replace(ROOT.toString(), "")));
                     return true; //Copied so returning true
                 }
             } catch (IOException ex) {
@@ -156,7 +155,7 @@ public class CopyPaste {
             }
         }
 
-        public static final ForgeConfigSpec spec = BUILDER.build();
+        public static final ForgeConfigSpec SPEC = BUILDER.build();
 
     }
 }

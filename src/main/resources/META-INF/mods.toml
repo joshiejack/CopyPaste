@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[25,)"
+loaderVersion="[32,)"
 issueTrackerURL="https://github.com/joshiejack/CopyPaste/issues"
 
 [[mods]]
@@ -15,5 +15,5 @@ issueTrackerURL="https://github.com/joshiejack/CopyPaste/issues"
 [[dependencies.copypaste]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.13.0,]"
+    versionRange="[1.16.1,]"
     side="BOTH"

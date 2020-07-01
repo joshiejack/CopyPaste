@@ -17,13 +17,13 @@ archivesBaseName = "copypaste"
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 minecraft {
-    mappings channel: 'snapshot', version: project.mappings + "-" + project.minecraft_version
+    mappings channel: 'snapshot', version: project.mappings
 
     runs {
         client {
             workingDirectory project.file('run')
             mods {
-                waddles {
+                copypaste {
                     source sourceSets.main
                 }
             }
@@ -31,7 +31,7 @@ minecraft {
         server {
             workingDirectory project.file('run')
             mods {
-                waddles {
+                copypaste {
                     source sourceSets.main
                 }
             }
