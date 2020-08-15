@@ -1,6 +1,7 @@
 modLoader="javafml"
 loaderVersion="[32,)"
 issueTrackerURL="https://github.com/joshiejack/CopyPaste/issues"
+license="MIT"
 
 [[mods]]
     modId="copypaste"
